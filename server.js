@@ -9,8 +9,12 @@ const users = {
         password: "admin123", // Store bcrypt hashes in production
         currentDevice: null
     },
-    "user2": {
-        password: "hashed_password_2",
+    "amina": {
+        password: "amina@123",
+        currentDevice: null
+    },
+    "@skc": {
+        password: "@skc@123#",
         currentDevice: null
     }
 };
