@@ -6,7 +6,6 @@ app.use(express.json());
 const users = {
   "admin": "admin123",
   "user1": "password1",
-  "john": "doe123"
 };
 
 // Login endpoint
