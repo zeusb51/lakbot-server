@@ -1,73 +1,82 @@
+// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
+const crypto = require('crypto');
 const app = express();
 
-// Database mock (replace with real DB in production)
+// Database of users (in production, use a real database)
 const users = {
     "admin": {
-        password: "password123",
-        deviceId: null // Stores the first device ID that logs in
+        password: "Tarekgf@155", // Store hashed passwords in production
+        deviceBindings: {}
+    },
+    "Skc": {
+        password: "Skc@1122#?3&%4%$",
+        deviceBindings: {}
     }
 };
 
+// Middleware
 app.use(bodyParser.json());
 
-app.post('/api/verify', (req, res) => {
-    const { username, password, deviceId } = req.body;
+// Authentication endpoint
+app.post('/api/auth', (req, res) => {
+    const { username, password, device_id } = req.body;
     
-    if (!users[username]) {
-        return res.status(401).json({ 
+    // Validate inputs
+    if (!username || !password || !device_id) {
+        return res.status(400).json({
             success: false,
-            message: "Invalid credentials"
+            message: "Missing required fields"
         });
     }
 
+    // Check user exists
     const user = users[username];
-    
-    // Check password
-    if (user.password !== password) {
+    if (!user) {
         return res.status(401).json({
             success: false,
             message: "Invalid credentials"
         });
     }
 
-    // Device verification logic
-    if (!user.deviceId) {
-        // First login - register device
-        user.deviceId = deviceId;
-        return res.json({
-            success: true,
-            message: "Login successful",
-            isNewDevice: true
-        });
-    } else if (user.deviceId === deviceId) {
-        // Recognized device
-        return res.json({
-            success: true,
-            message: "Login successful",
-            isNewDevice: false
-        });
-    } else {
-        // Unknown device - reject login
-        return res.status(403).json({
+    // Verify password (in production, use proper password hashing)
+    if (password !== user.password) {
+        return res.status(401).json({
             success: false,
-            message: "Account is already in use on another device",
-            errorCode: "DEVICE_MISMATCH"
+            message: "Invalid credentials"
         });
     }
-});
 
-// Add device reset endpoint for legitimate device changes
-app.post('/api/reset-device', (req, res) => {
-    const { username, password, newDeviceId } = req.body;
-    
-    if (!users[username] || users[username].password !== password) {
-        return res.status(401).json({ success: false });
+    // Check if device is already registered
+    const existingDevice = user.deviceBindings[device_id];
+    if (existingDevice) {
+        // Device already registered - return existing token
+        return res.json({
+            success: true,
+            token: existingDevice.token
+        });
     }
 
-    users[username].deviceId = newDeviceId;
-    res.json({ success: true });
+    // New device - generate token and register device
+    const authToken = generateAuthToken();
+    user.deviceBindings[device_id] = {
+        token: authToken,
+        createdAt: new Date()
+    };
+
+    res.json({
+        success: true,
+        token: authToken
+    });
 });
 
-app.listen(process.env.PORT || 3000);
+function generateAuthToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
