@@ -1,70 +1,73 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
-
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
 
-// Mock user database
+// Database mock (replace with real DB in production)
 const users = {
     "admin": {
         password: "password123",
-        deviceId: null
+        deviceId: null // Stores the first device ID that logs in
     }
 };
 
+app.use(bodyParser.json());
+
 app.post('/api/verify', (req, res) => {
-    try {
-        const { username, password, deviceId } = req.body;
-        
-        if (!username || !password || !deviceId) {
-            return res.status(400).json({
-                success: false,
-                message: "Missing required fields"
-            });
-        }
-
-        const user = users[username];
-        
-        if (!user || user.password !== password) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid credentials"
-            });
-        }
-
-        if (!user.deviceId) {
-            // First login
-            user.deviceId = deviceId;
-            return res.json({
-                success: true,
-                message: "Login successful"
-            });
-        } else if (user.deviceId === deviceId) {
-            // Recognized device
-            return res.json({
-                success: true,
-                message: "Login successful"
-            });
-        } else {
-            // Device mismatch
-            return res.status(403).json({
-                success: false,
-                message: "Account in use on another device",
-                errorCode: "DEVICE_MISMATCH"
-            });
-        }
-    } catch (error) {
-        console.error("Error in /api/verify:", error);
-        res.status(500).json({
+    const { username, password, deviceId } = req.body;
+    
+    if (!users[username]) {
+        return res.status(401).json({ 
             success: false,
-            message: "Internal server error"
+            message: "Invalid credentials"
+        });
+    }
+
+    const user = users[username];
+    
+    // Check password
+    if (user.password !== password) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid credentials"
+        });
+    }
+
+    // Device verification logic
+    if (!user.deviceId) {
+        // First login - register device
+        user.deviceId = deviceId;
+        return res.json({
+            success: true,
+            message: "Login successful",
+            isNewDevice: true
+        });
+    } else if (user.deviceId === deviceId) {
+        // Recognized device
+        return res.json({
+            success: true,
+            message: "Login successful",
+            isNewDevice: false
+        });
+    } else {
+        // Unknown device - reject login
+        return res.status(403).json({
+            success: false,
+            message: "Account is already in use on another device",
+            errorCode: "DEVICE_MISMATCH"
         });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Add device reset endpoint for legitimate device changes
+app.post('/api/reset-device', (req, res) => {
+    const { username, password, newDeviceId } = req.body;
+    
+    if (!users[username] || users[username].password !== password) {
+        return res.status(401).json({ success: false });
+    }
+
+    users[username].deviceId = newDeviceId;
+    res.json({ success: true });
 });
+
+app.listen(process.env.PORT || 3000);
