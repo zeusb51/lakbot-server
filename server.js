@@ -1,29 +1,25 @@
-// server.js
 const express = require('express');
-const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const app = express();
+app.use(express.json());
 
-// Database of users (in production, use a real database)
+// User database (use real DB in production)
 const users = {
     "admin": {
-        password: "Tarekgf@155", // Store hashed passwords in production
-        deviceBindings: {}
+        password: "admin123", // Store bcrypt hashes in production
+        currentDevice: null
     },
-    "Skc": {
-        password: "Skc@1122#?3&%4%$",
-        deviceBindings: {}
+    "user2": {
+        password: "hashed_password_2",
+        currentDevice: null
     }
 };
-
-// Middleware
-app.use(bodyParser.json());
 
 // Authentication endpoint
 app.post('/api/auth', (req, res) => {
     const { username, password, device_id } = req.body;
     
-    // Validate inputs
+    // 1. Validate inputs
     if (!username || !password || !device_id) {
         return res.status(400).json({
             success: false,
@@ -31,7 +27,7 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // Check user exists
+    // 2. Check user exists
     const user = users[username];
     if (!user) {
         return res.status(401).json({
@@ -40,7 +36,7 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // Verify password (in production, use proper password hashing)
+    // 3. Verify password (use bcrypt.compare in production)
     if (password !== user.password) {
         return res.status(401).json({
             success: false,
@@ -48,35 +44,38 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // Check if device is already registered
-    const existingDevice = user.deviceBindings[device_id];
-    if (existingDevice) {
-        // Device already registered - return existing token
+    // 4. Check if already logged in on another device
+    if (user.currentDevice && user.currentDevice !== device_id) {
         return res.json({
-            success: true,
-            token: existingDevice.token
+            success: false,
+            message: "Account is already active on another device"
         });
     }
 
-    // New device - generate token and register device
-    const authToken = generateAuthToken();
-    user.deviceBindings[device_id] = {
-        token: authToken,
-        createdAt: new Date()
-    };
+    // 5. Generate new token and register device
+    const authToken = generateToken();
+    user.currentDevice = device_id;
 
     res.json({
         success: true,
-        token: authToken
+        token: authToken,
+        is_new_device: true
     });
 });
 
-function generateAuthToken() {
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+    const { username } = req.body;
+    
+    if (users[username]) {
+        users[username].currentDevice = null;
+    }
+    
+    res.json({ success: true });
+});
+
+function generateToken() {
     return crypto.randomBytes(32).toString('hex');
 }
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+app.listen(3000, () => console.log('Server running on port 3000'));
