@@ -17,6 +17,10 @@ const users = {
         password: "@skc@123#",
         currentDevice: null
     }
+   "@Rhm": {
+        password: "@rhm@123#",
+        currentDevice: null
+    }
 };
 
 // Authentication endpoint
@@ -52,7 +56,7 @@ app.post('/api/auth', (req, res) => {
     if (user.currentDevice && user.currentDevice !== device_id) {
         return res.json({
             success: false,
-            message: "Account is already active on another device"
+            message: "Cheating detected! you cannot use same password in multiple devices"
         });
     }
 
