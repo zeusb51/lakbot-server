@@ -3,31 +3,27 @@ const crypto = require('crypto');
 const app = express();
 app.use(express.json());
 
-// User database (use real DB in production)
+// Database (in-memory for example, use MongoDB/PostgreSQL in production)
 const users = {
     "admin": {
         password: "admin123", // Store bcrypt hashes in production
-        currentDevice: null
+        currentDevice: null,
+        blockedDevices: new Set()
     },
-    "amina": {
-        password: "amina@123",
-        currentDevice: null
-    },
-    "@skc": {
-        password: "@skc@123#",
-        currentDevice: null
-    },
-   "@Rhm": {
-        password: "@rhm@123#",
-        currentDevice: null
+   "amina": {
+        password: "amina23", // Store bcrypt hashes in production
+        currentDevice: null,
+        blockedDevices: new Set()
     }
 };
+
+const activeDevices = new Map(); // device_id -> {username, lastActive}
 
 // Authentication endpoint
 app.post('/api/auth', (req, res) => {
     const { username, password, device_id } = req.body;
     
-    // 1. Validate inputs
+    // Validate inputs
     if (!username || !password || !device_id) {
         return res.status(400).json({
             success: false,
@@ -35,7 +31,6 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // 2. Check user exists
     const user = users[username];
     if (!user) {
         return res.status(401).json({
@@ -44,7 +39,14 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // 3. Verify password (use bcrypt.compare in production)
+    // Check if device is blocked
+    if (user.blockedDevices.has(device_id)) {
+        return res.status(403).json({
+            success: false,
+            message: "This device is blocked"
+        });
+    }
+
     if (password !== user.password) {
         return res.status(401).json({
             success: false,
@@ -52,17 +54,21 @@ app.post('/api/auth', (req, res) => {
         });
     }
 
-    // 4. Check if already logged in on another device
+    // Check if already logged in on another device
     if (user.currentDevice && user.currentDevice !== device_id) {
         return res.json({
             success: false,
-            message: "Cheating detected! you cannot use same password in multiple devices"
+            message: "Already logged in on another device"
         });
     }
 
-    // 5. Generate new token and register device
+    // Generate token and register device
     const authToken = generateToken();
     user.currentDevice = device_id;
+    activeDevices.set(device_id, {
+        username: username,
+        lastActive: new Date()
+    });
 
     res.json({
         success: true,
@@ -71,15 +77,40 @@ app.post('/api/auth', (req, res) => {
     });
 });
 
-// Logout endpoint
-app.post('/api/logout', (req, res) => {
-    const { username } = req.body;
+// Admin endpoints
+app.post('/api/admin/block-device', (req, res) => {
+    const { adminToken, device_id } = req.body;
     
-    if (users[username]) {
-        users[username].currentDevice = null;
+    // Verify admin (in production, use JWT verification)
+    if (!adminToken || adminToken !== "SECRET_ADMIN_TOKEN") {
+        return res.status(403).json({ success: false });
     }
+
+    // Block device for all users
+    Object.values(users).forEach(user => {
+        user.blockedDevices.add(device_id);
+        if (user.currentDevice === device_id) {
+            user.currentDevice = null;
+        }
+    });
     
+    activeDevices.delete(device_id);
     res.json({ success: true });
+});
+
+app.get('/api/admin/active-devices', (req, res) => {
+    if (req.query.adminToken !== "SECRET_ADMIN_TOKEN") {
+        return res.status(403).json({ success: false });
+    }
+
+    res.json({
+        success: true,
+        devices: Array.from(activeDevices.entries()).map(([id, data]) => ({
+            device_id: id,
+            username: data.username,
+            last_active: data.lastActive
+        }))
+    });
 });
 
 function generateToken() {
