@@ -9,7 +9,7 @@ const activeDevices = new Map(); // device_id -> {username, ip, loginTime, devic
 // User database
 const users = {
     "admin": {
-        password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", // SHA-256 of "admin123"
+        password: "admin123", // SHA-256 of "admin123"
         currentDevice: null
     }
 };
