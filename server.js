@@ -10,12 +10,22 @@ const blockedDevices = new Set();
 // User database with multiple admin users
 const users = {
     // Regular users
-    "user1": {
+    "skc": {
         password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // SHA-256 of "password"
         isAdmin: false,
         blockedDevices: new Set()
     },
-    "user2": {
+    "shnz": {
+        password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // SHA-256 of "password"
+        isAdmin: false,
+        blockedDevices: new Set()
+    },
+    "Firoz": {
+        password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // SHA-256 of "password"
+        isAdmin: false,
+        blockedDevices: new Set()
+    },
+   "Ithu": {
         password: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", // SHA-256 of "password"
         isAdmin: false,
         blockedDevices: new Set()
