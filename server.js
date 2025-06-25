@@ -32,9 +32,9 @@ const users = {
     },
     
     // Admin users
-    "admin1": {
+    "amina": {
         password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", // SHA-256 of "admin"
-        isAdmin: true,
+        isAdmin: false,
         blockedDevices: new Set()
     },
     "admin2": {
